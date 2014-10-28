@@ -7,6 +7,8 @@ var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 var mapSeries = require('promise-map-series')
+var copyDereferenceSync = require('copy-dereference').sync
+var symlinkOrCopySync = require('symlink-or-copy').sync
 
 
 module.exports = Filter
@@ -38,8 +40,7 @@ Filter.prototype.write = function (readTree, destDir) {
         if (self.canProcessFile(relativePath)) {
           return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
-          helpers.copyPreserveSync(
-            srcDir + '/' + relativePath, destDir + '/' + relativePath)
+          symlinkOrCopySync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
         }
       }
     })
@@ -102,11 +103,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var dest = destDir + '/' + cacheEntry.outputFiles[i]
       mkdirp.sync(path.dirname(dest))
-      // We may be able to link as an optimization here, because we control
-      // the cache directory; we need to be 100% sure though that we don't try
-      // to hardlink symlinks, as that can lead to directory hardlinks on OS X
-      helpers.copyPreserveSync(
-        self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
@@ -119,7 +116,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var cacheFile = (self._cacheIndex++) + ''
       cacheEntry.cacheFiles.push(cacheFile)
-      helpers.copyPreserveSync(
+      copyDereferenceSync(
         destDir + '/' + cacheEntry.outputFiles[i],
         self.getCacheDir() + '/' + cacheFile)
     }
